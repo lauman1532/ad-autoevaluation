@@ -8,6 +8,7 @@ import cv2
 SKIN_MASK_RES_N = 512
 SKIN_MASK_RES_M = 384
 
+
 def skinSegment(image, skin_mask):
     skin_segment = cv2.bitwise_and(image, image, mask=skin_mask)
     return skin_segment
@@ -24,8 +25,8 @@ def kmeans(image):
     )
 
     image_LAB = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-    image_chr = image_LAB[:,:,1:2]
-    #image = image[image != [0,0,0]]
+    image_chr = image_LAB[:, :, 1:2]
+    # image = image[image != [0,0,0]]
     z = np.float32(image_chr.reshape(-1, 2))
 
     label = km.fit_predict(z)
@@ -40,13 +41,13 @@ def glcm(image, window_size):
     OFFSET = [1]
     THETA = [0, np.pi/4, np.pi/2, 3*np.pi/4]
     N_GREY_LEVELS = 256
-    
+
     patches = extract_patches_2d(image, (window_size, window_size))
 
     contrast = []
     ASM = []
     correlation = []
-    
+
     for patch in patches:
         P = feature.greycomatrix(
             patch, OFFSET, THETA, levels=N_GREY_LEVELS, symmetric=True,
@@ -57,6 +58,7 @@ def glcm(image, window_size):
         feature.greycoprops(P, prop='correlation')
 
     return contrast, ASM, correlation, P
+
 
 def main():
     image = cv2.imread('images/test_02.jpg', cv2.IMREAD_COLOR)

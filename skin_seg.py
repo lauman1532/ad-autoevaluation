@@ -1,8 +1,3 @@
-#import csv
-import glob
-import os
-
-import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 
@@ -247,61 +242,38 @@ def combineSkinMasks(skin_mask1, skin_mask2, skin_mask3, skin_mask_gabor):
     return y_pred
 
 
-def finalPostProcess(final_skin_mask):
-    skin_mask = cv2.medianBlur(np.array(final_skin_mask, dtype=np.uint8), 7)
+def finalPostProcess(input_skin_mask):
+    AS_SKIN_THRES = 0.95
 
-    new_img = np.zeros_like(skin_mask)
-    for val in np.unique(skin_mask)[1:]:
-        mask = np.uint8(skin_mask == val)
-        labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]
-        largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
-        new_img[labels == largest_label] = val
+    skin_mask = cv2.medianBlur(np.array(input_skin_mask, dtype=np.uint8), 7)
+    new_skin_mask = np.zeros_like(skin_mask)
 
-    cnt, _ = cv2.findContours(new_img, cv2.RETR_EXTERNAL,
+    # Find 4-way connected components
+    labels, stats = cv2.connectedComponentsWithStats(skin_mask, 4)[1:3]
+    # Igonre stats[0, *] becuase 0 is the label of background
+    stats_argsorted = np.argsort(stats[1:, cv2.CC_STAT_AREA])[::-1]
+    largest_label = 1 + stats_argsorted[0]
+    new_skin_mask[labels == largest_label] = 1
+
+    # Check if second largest connected component occupies similar number
+    # of pixels compared to the largest connected component.
+    # If true -> it is considered as skin
+    if ((len(stats_argsorted) > 1) and
+        (stats[stats_argsorted[1]+1, cv2.CC_STAT_AREA] >
+            AS_SKIN_THRES*stats[stats_argsorted[0]+1, cv2.CC_STAT_AREA])):
+        second_largest_label = 1 + stats_argsorted[1]
+        new_skin_mask[labels == second_largest_label] = 1
+
+    cnt, _ = cv2.findContours(new_skin_mask, cv2.RETR_EXTERNAL,
                               cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(new_img, cnt, -1, 1, -1)
+    cv2.drawContours(new_skin_mask, cnt, -1, 1, -1)
 
-    return new_img
+    return new_skin_mask
 
 
 def main():
-    image_files = glob.glob('Images/Unsorted/**/**/*.jpg')
-    num_images = len(image_files)
-    gabor_kernels, kernel_params = gaborKernels()
-
-    image_counter = 0
-    print('\n== Skin segmenting images ==')
-    for f in image_files:
-        file_dir = os.path.dirname(f)
-        patient_id = os.path.basename(file_dir)
-        filename = os.path.splitext(os.path.basename(f))[0]
-        print('\n' + patient_id)
-        print(filename + '\n')
-
-        image = cv2.imread(f, cv2.IMREAD_COLOR)
-        print("Processing %4d out of %4d images" % (image_counter, num_images))
-        image_ds = resample(image)
-        skin_mask1, skin_mask2, skin_mask3 = skinMaskColour(image_ds)
-        skin_mask_gabor = skinMaskGabor(image, gabor_kernels, kernel_params)
-
-        skin_mask_dir = os.path.join(os.getcwd(), 'Images', 'skin_masks',
-                                     patient_id)
-        if not os.path.exists(skin_mask_dir):
-            os.makedirs(skin_mask_dir)
-
-        cv2.imwrite(os.path.join(skin_mask_dir, 'sm1.png'), skin_mask1)
-        cv2.imwrite(os.path.join(skin_mask_dir, 'sm2.png'), skin_mask2)
-        cv2.imwrite(os.path.join(skin_mask_dir, 'sm3.png'), skin_mask3)
-        cv2.imwrite(os.path.join(skin_mask_dir, 'sm4.png'), skin_mask_gabor)
-
-        pre_f_skin_mask = combineSkinMasks(skin_mask1, skin_mask2,
-                                           skin_mask3, skin_mask_gabor)
-
-        final_skin_mask = finalPostProcess(pre_f_skin_mask)
-        cv2.imwrite(os.path.join(skin_mask_dir, 'sm_f.png'), final_skin_mask)
-
-        image_counter = image_counter + 1
-
+    # Migrated to build_dataset.py
+    pass
 
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
 
 .vscode/
 images/
+skin_masks/
+perf_eval.py
