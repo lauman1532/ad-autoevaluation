@@ -3,6 +3,8 @@ ad-autoevaluation is my UROP and final year project. The aims of this project in
 
 Due to privacy reasons, skin image dataset cannot be provided.
 
+Please note some files (e.g. lesion_seg and severity_class) are still outdated as I am moving the files from juypter (.ipynb) to .py. 
+
 ## Dependencies
 The scripts require:
 * Python (>= 3.5)
